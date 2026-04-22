@@ -1,4 +1,4 @@
-const CACHE_NAME = 'torneos-fc-cache-v1';
+const CACHE_NAME = 'torneos-fc-cache-v2';
 const urlsToCache = [
   './',
   './index.html',
