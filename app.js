@@ -116,6 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             btnGlobalBack.classList.add('hidden');
         }
+
+        // Toggle stats menu visibility based on view
+        const menuStatsBtn = document.getElementById('btn-menu-stats');
+        if (menuStatsBtn) {
+            if (view === groupsView || view === bracketView || view === statsView) {
+                menuStatsBtn.classList.remove('hidden');
+            } else {
+                menuStatsBtn.classList.add('hidden');
+            }
+        }
     }
 
     // Home & Format Navigation
