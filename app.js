@@ -36,7 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
         participants: [],
         groups: [],      // Array of { id, name, teams: [], matches: [] }
     };
-    
+     const state = {
+    // ... tus otras variables ...
+    shareCode: null,
+    isSpectator: false
+};
     document.getElementById('bracket-format-select').addEventListener('change', (e) => {
         state.knockoutFormat = e.target.value;
         state.bracketGenerated = false;
