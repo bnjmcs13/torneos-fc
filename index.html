@@ -66,6 +66,9 @@
 
                 <div class="hero-actions">
                     <button id="btn-create-tournament" class="btn-primary hero-btn">Crear Torneo</button>
+                    <button id="btn-join-tournament" class="btn-continue-last">
+                        <span>👁️</span> Unirse a Torneo
+                    </button>
                     <button id="btn-hero-saved" class="btn-secondary hero-btn-secondary">Torneos Guardados</button>
                     <button id="btn-hero-install" class="btn-primary hero-btn hidden" style="background: linear-gradient(135deg, #00F0FF, #0080FF); box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4);">
                         <span class="f-icon">📱</span> Instalar App
@@ -304,6 +307,18 @@
 
     <!-- Modales o Notificaciones -->
     <div id="toast" class="toast"></div>
+    <div id="join-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; justify-content:center; align-items:center;">
+    <div style="background:var(--card-bg); padding:2.5rem; border-radius:12px; border:1px solid var(--border-color); width:90%; max-width:400px; text-align:center; backdrop-filter:blur(10px);">
+        <h2 style="color:white; margin-bottom:1rem;">Modo Espectador</h2>
+        <p style="color:var(--accent-silver); margin-bottom:1.5rem;">Ingresa el código único del torneo</p>
+        <input type="text" id="join-code-input" placeholder="Ej: FC-A1B2" style="width:100%; padding:1rem; text-align:center; font-size:1.2rem; text-transform:uppercase; margin-bottom:1rem; border-radius:6px; border:1px solid var(--border-color); background:rgba(0,0,0,0.5); color:white;">
+        <p id="join-error-text" class="hidden" style="color:#ff4d4d; margin-bottom:1rem;"></p>
+        <div style="display:flex; gap:1rem; justify-content:center;">
+            <button id="btn-cancel-join" class="btn-secondary">Cancelar</button>
+            <button id="btn-confirm-join" class="btn-primary" style="width:auto; padding:0.8rem 1.5rem;">Unirse</button>
+        </div>
+    </div>
+</div>
 
     <!-- Modal de Campeón -->
     <div id="champion-modal" class="champion-modal hidden">
