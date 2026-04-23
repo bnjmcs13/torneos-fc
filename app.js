@@ -1315,32 +1315,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // SAVE LOGIC
-    function saveTournament() {
-        if (!state.id) {
-            state.id = 'T-' + Date.now();
-        }
-        if (!state.name) {
-            const inputName = document.getElementById('tournament-name').value.trim();
-            if (inputName) {
-                state.name = inputName;
-            } else {
-                state.name = `Torneo ${state.format.toUpperCase()} - ${new Date().toLocaleDateString()}`;
-            }
-        }
-        state.lastSaved = new Date().toLocaleString();
-        
-        let stored = JSON.parse(localStorage.getItem('torneos-fc-data') || '[]');
-        const existingIdx = stored.findIndex(t => t.id === state.id);
-        
-        if (existingIdx >= 0) {
-            stored[existingIdx] = state;
-        } else {
-            stored.push(state);
-        }
-        localStorage.setItem('torneos-fc-data', JSON.stringify(stored));
-        showToast('Torneo guardado exitosamente 💾');
-        initHome();
+    async function saveTournament() {
+    if (state.isSpectator) {
+        showToast('Modo Espectador: No puedes editar este torneo 👁️');
+        return;
     }
+
+    if (!state.id) state.id = 'T-' + Date.now();
+    if (!state.name) {
+        const inputName = document.getElementById('tournament-name').value.trim();
+        state.name = inputName || `Torneo ${state.format.toUpperCase()} - ${new Date().toLocaleDateString()}`;
+    }
+    state.lastSaved = new Date().toLocaleString();
+
+    try {
+        const response = await fetch('/api/tournaments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(state)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            state.shareCode = data.shareCode;
+            
+            // Guardar localmente también
+            let stored = JSON.parse(localStorage.getItem('torneos-fc-data') || '[]');
+            const existingIdx = stored.findIndex(t => t.id === state.id);
+            if (existingIdx >= 0) {
+                stored[existingIdx] = state;
+            } else {
+                stored.push(state);
+            }
+            localStorage.setItem('torneos-fc-data', JSON.stringify(stored));
+            
+            showToast(`Guardado con éxito. Tu Código: ${data.shareCode} 💾`);
+            // Nota: Aquí puedes actualizar un div en tu UI para que el creador siempre vea su código.
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Error al conectar con el servidor.');
+    }
+}
+
 
     if (btnSaveGroups) btnSaveGroups.addEventListener('click', saveTournament);
     if (btnSaveBracket) btnSaveBracket.addEventListener('click', saveTournament);
@@ -1650,6 +1667,94 @@ document.addEventListener('DOMContentLoaded', () => {
         deferredPrompt = null;
         hideInstallPromotion();
     });
+        // === LÓGICA DE UNIRSE ===
+    const btnJoinTournament = document.getElementById('btn-join-tournament');
+    const joinModal = document.getElementById('join-modal');
+    const btnCancelJoin = document.getElementById('btn-cancel-join');
+    const btnConfirmJoin = document.getElementById('btn-confirm-join');
+    const joinCodeInput = document.getElementById('join-code-input');
+    const joinErrorText = document.getElementById('join-error-text');
+
+    if (btnJoinTournament) {
+        btnJoinTournament.addEventListener('click', () => {
+            joinErrorText.classList.add('hidden');
+            joinCodeInput.value = '';
+            joinModal.classList.remove('hidden');
+        });
+    }
+
+    if (btnCancelJoin) {
+        btnCancelJoin.addEventListener('click', () => joinModal.classList.add('hidden'));
+    }
+
+    if (btnConfirmJoin) {
+        btnConfirmJoin.addEventListener('click', async () => {
+            const code = joinCodeInput.value.trim().toUpperCase();
+            if (!code) return;
+
+            btnConfirmJoin.disabled = true;
+            btnConfirmJoin.textContent = 'Buscando...';
+            joinErrorText.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/tournaments/${code}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    joinModal.classList.add('hidden');
+                    const tData = data.tournament;
+                    tData.isSpectator = true; // ACTIVAMOS EL MODO ESPECTADOR
+                    
+                    // Limpiar estado y cargar los nuevos datos
+                    for (let key in state) delete state[key];
+                    Object.assign(state, tData);
+                    
+                    // Lógica para mostrar la vista correcta (Bracket o Grupos)
+                    if (state.bracketRounds && state.bracketRounds.length > 0) {
+                        drawBracket();
+                        showView(document.getElementById('bracket-view'), false);
+                    } else if (state.groups && state.groups.length > 0) {
+                        drawGroups();
+                        showView(document.getElementById('groups-view'), false);
+                    }
+                    
+                    showToast('Has entrado como Espectador 👁️');
+                } else {
+                    joinErrorText.textContent = 'No se encontró un torneo con ese código.';
+                    joinErrorText.classList.remove('hidden');
+                }
+            } catch (err) {
+                joinErrorText.textContent = 'Error de conexión. Inténtalo de nuevo.';
+                joinErrorText.classList.remove('hidden');
+            } finally {
+                btnConfirmJoin.disabled = false;
+                btnConfirmJoin.textContent = 'Unirse';
+            }
+        });
+    }
+
+    // === FUNCIÓN MÁGICA PARA BLOQUEAR TODO AL ESPECTADOR ===
+    // Asegúrate de llamar a esta función dentro de tus funciones `drawGroups()` y `drawBracket()` justo al final antes de que terminen.
+    window.aplicarModoEspectador = function() {
+        if (!state.isSpectator) return;
+        
+        // Bloquear todos los inputs de marcadores
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.readOnly = true;
+            input.style.opacity = '0.8';
+        });
+        
+        // Esconder botones de guardar/confirmar en el bracket
+        document.querySelectorAll('.btn-bracket-save').forEach(btn => {
+            btn.style.display = 'none';
+        });
+
+        // Esconder los botones flotantes principales de guardado si los tienes
+        const btnSaveGroups = document.getElementById('btn-save-groups');
+        const btnSaveBracket = document.getElementById('btn-save-bracket');
+        if (btnSaveGroups) btnSaveGroups.style.display = 'none';
+        if (btnSaveBracket) btnSaveBracket.style.display = 'none';
+    };
 
 });
 
