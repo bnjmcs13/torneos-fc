@@ -31,16 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         id: null,
         name: '',
-        format: 'champions', // default
-        knockoutFormat: 'single', // single or double
+        format: 'champions',
+        knockoutFormat: 'single',
         participants: [],
-        groups: [],      // Array of { id, name, teams: [], matches: [] }
+        groups: [],
+        shareCode: null,
+        isSpectator: false
     };
-     const state = {
-    // ... tus otras variables ...
-    shareCode: null,
-    isSpectator: false
-};
+
     document.getElementById('bracket-format-select').addEventListener('change', (e) => {
         state.knockoutFormat = e.target.value;
         state.bracketGenerated = false;
@@ -109,6 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentView && currentView !== view) {
                 viewHistory.push(currentView);
             }
+        }
+        if (typeof aplicarModoEspectador === 'function') {
+            setTimeout(aplicarModoEspectador, 50); 
         }
 
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1314,49 +1315,47 @@ document.addEventListener('DOMContentLoaded', () => {
         pushWinnerToNextRound(nextR, nextM, null);
     }
 
-    // SAVE LOGIC
+       // SAVE LOGIC
     async function saveTournament() {
-    if (state.isSpectator) {
-        showToast('Modo Espectador: No puedes editar este torneo 👁️');
-        return;
-    }
-
-    if (!state.id) state.id = 'T-' + Date.now();
-    if (!state.name) {
-        const inputName = document.getElementById('tournament-name').value.trim();
-        state.name = inputName || `Torneo ${state.format.toUpperCase()} - ${new Date().toLocaleDateString()}`;
-    }
-    state.lastSaved = new Date().toLocaleString();
-
-    try {
-        const response = await fetch('/api/tournaments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(state)
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            state.shareCode = data.shareCode;
-            
-            // Guardar localmente también
-            let stored = JSON.parse(localStorage.getItem('torneos-fc-data') || '[]');
-            const existingIdx = stored.findIndex(t => t.id === state.id);
-            if (existingIdx >= 0) {
-                stored[existingIdx] = state;
-            } else {
-                stored.push(state);
-            }
-            localStorage.setItem('torneos-fc-data', JSON.stringify(stored));
-            
-            showToast(`Guardado con éxito. Tu Código: ${data.shareCode} 💾`);
-            // Nota: Aquí puedes actualizar un div en tu UI para que el creador siempre vea su código.
+        if (state.isSpectator) {
+            showToast('Modo Espectador: No puedes editar este torneo 👁️');
+            return;
         }
-    } catch (err) {
-        console.error(err);
-        showToast('Error al conectar con el servidor.');
+
+        if (!state.id) state.id = 'T-' + Date.now();
+        if (!state.name) {
+            const inputName = document.getElementById('tournament-name').value.trim();
+            state.name = inputName || `Torneo ${state.format.toUpperCase()} - ${new Date().toLocaleDateString()}`;
+        }
+        state.lastSaved = new Date().toLocaleString();
+
+        try {
+            const response = await fetch('/api/tournaments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state)
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                state.shareCode = data.shareCode || data.code;
+                
+                // Guardar localmente
+                let stored = JSON.parse(localStorage.getItem('torneos-fc-data') || '[]');
+                const existingIdx = stored.findIndex(t => t.id === state.id);
+                if (existingIdx >= 0) stored[existingIdx] = state;
+                else stored.push(state);
+                localStorage.setItem('torneos-fc-data', JSON.stringify(stored));
+                
+                showToast(`Guardado con éxito. Tu Código: ${state.shareCode} 💾`);
+                initHome();
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Error al conectar con el servidor.');
+        }
     }
-}
+
 
 
     if (btnSaveGroups) btnSaveGroups.addEventListener('click', saveTournament);
@@ -1616,6 +1615,104 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+
+        // === LÓGICA DE UNIRSE A TORNEO ===
+    const btnJoinTournament = document.getElementById('btn-join-tournament');
+    const joinModal = document.getElementById('join-modal');
+    const btnCancelJoin = document.getElementById('btn-cancel-join');
+    const btnConfirmJoin = document.getElementById('btn-confirm-join');
+    const joinCodeInput = document.getElementById('join-code-input');
+    const joinErrorText = document.getElementById('join-error-text');
+
+    if (btnJoinTournament) {
+        btnJoinTournament.addEventListener('click', () => {
+            joinErrorText.classList.add('hidden');
+            joinCodeInput.value = '';
+            joinModal.classList.remove('hidden');
+        });
+    }
+
+    if (btnCancelJoin) {
+        btnCancelJoin.addEventListener('click', () => joinModal.classList.add('hidden'));
+    }
+
+    if (btnConfirmJoin) {
+        btnConfirmJoin.addEventListener('click', async () => {
+            const code = joinCodeInput.value.trim().toUpperCase();
+            if (!code) return;
+
+            btnConfirmJoin.disabled = true;
+            btnConfirmJoin.textContent = 'Buscando...';
+            joinErrorText.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/tournaments/${code}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    joinModal.classList.add('hidden');
+                    const tData = data.tournament;
+                    tData.isSpectator = true; 
+                    
+                    for (let key in state) delete state[key];
+                    Object.assign(state, tData);
+                    
+                    viewHistory.length = 0; 
+                    viewHistory.push(document.getElementById('home-view'));
+                    
+                    if (state.bracketRounds && state.bracketRounds.length > 0 && (!state.groups || state.groups.length === 0)) {
+                        drawBracket();
+                        showView(document.getElementById('bracket-view'), false);
+                    } else if (state.groups && state.groups.length > 0) {
+                        drawGroups();
+                        if (state.bracketGenerated || (state.bracketRounds && state.bracketRounds.length > 0)) {
+                            drawBracket();
+                        }
+                        showView(document.getElementById('groups-view'), false);
+                    }
+                    
+                    showToast('Has entrado como Espectador 👁️');
+                    
+                    let stored = JSON.parse(localStorage.getItem('torneos-fc-data') || '[]');
+                    const existingIdx = stored.findIndex(t => t.id === state.id);
+                    if (existingIdx >= 0) stored[existingIdx] = state;
+                    else stored.push(state);
+                    localStorage.setItem('torneos-fc-data', JSON.stringify(stored));
+                    initHome();
+
+                } else {
+                    joinErrorText.textContent = 'No se encontró un torneo con ese código.';
+                    joinErrorText.classList.remove('hidden');
+                }
+            } catch (err) {
+                joinErrorText.textContent = 'Error de conexión.';
+                joinErrorText.classList.remove('hidden');
+            } finally {
+                btnConfirmJoin.disabled = false;
+                btnConfirmJoin.textContent = 'Ver Torneo';
+            }
+        });
+    }
+
+    window.aplicarModoEspectador = function() {
+        if (!state.isSpectator) return;
+        
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.readOnly = true;
+            input.style.opacity = '0.8';
+        });
+        
+        document.querySelectorAll('.btn-bracket-save').forEach(btn => {
+            btn.style.display = 'none';
+        });
+
+        const btnSaveGroups = document.getElementById('btn-save-groups');
+        const btnSaveBracket = document.getElementById('btn-save-bracket');
+        if (btnSaveGroups) btnSaveGroups.style.display = 'none';
+        if (btnSaveBracket) btnSaveBracket.style.display = 'none';
+    };
+
+    
     // --- PWA Installation Logic ---
     let deferredPrompt;
     const btnHeroInstall = document.getElementById('btn-hero-install');
