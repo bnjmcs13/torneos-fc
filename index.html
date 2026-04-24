@@ -47,6 +47,11 @@
         </div>
     </div>
 
+    <!-- Badge de Código Global -->
+    <div id="global-share-badge" class="global-share-badge hidden" title="Comparte este código para Modo Espectador">
+        <span class="f-icon">👁️</span> Código: <strong id="global-code-text">---</strong>
+    </div>
+
     <div class="container">
         
         <!-- Vista de Inicio Principal -->
@@ -224,9 +229,6 @@
                     <p id="groups-sub-title">Resultados</p>
                 </div>
                 <div class="view-controls" style="display:flex; gap:1rem; align-items:center;">
-                    <div id="groups-share-code" class="share-code-badge hidden" title="Comparte este código para que otros vean el torneo">
-                        Código: <strong id="groups-code-text">---</strong>
-                    </div>
                     <button id="btn-save-groups" class="btn-secondary" style="color:var(--primary-color); border-color:var(--primary-color);">💾 Guardar</button>
                     <button id="btn-header-stats-groups" class="btn-secondary" style="color:#FFD700; border-color:#FFD700;">📊 Estadísticas</button>
                     <button id="btn-to-bracket" class="btn-primary" style="width: auto; padding: 0.5rem 1.5rem; font-size: 0.9rem;">Ver Fase Eliminatoria</button>
@@ -260,9 +262,6 @@
                     <p>Eliminatorias</p>
                 </div>
                 <div class="bracket-controls" style="display:flex; gap:1rem; align-items:center;">
-                    <div id="bracket-share-code" class="share-code-badge hidden" title="Comparte este código para que otros vean el torneo">
-                        Código: <strong id="bracket-code-text">---</strong>
-                    </div>
                     <button id="btn-save-bracket" class="btn-secondary" style="color:var(--primary-color); border-color:var(--primary-color);">💾 Guardar</button>
                     <button id="btn-header-stats-bracket" class="btn-secondary" style="color:#FFD700; border-color:#FFD700;">📊 Estadísticas</button>
                     <select id="bracket-format-select" class="form-select">

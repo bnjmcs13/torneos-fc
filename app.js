@@ -101,6 +101,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Switch Views
     const viewHistory = [];
 
+    window.updateGlobalBadge = function() {
+        const badge = document.getElementById('global-share-badge');
+        const text = document.getElementById('global-code-text');
+        if (!badge || !text) return;
+        
+        const currentView = document.querySelector('.view.active');
+        const isHomeOrFormat = currentView && (currentView.id === 'home-view' || currentView.id === 'format-view' || currentView.id === 'setup-view');
+
+        if (state.shareCode && !isHomeOrFormat) {
+            text.textContent = state.shareCode;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    };
+
     function showView(view, pushToHistory = true) {
         if (pushToHistory) {
             const currentView = document.querySelector('.view.active');
@@ -131,6 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (typeof aplicarModoEspectador === 'function') {
             setTimeout(aplicarModoEspectador, 50); // Timeout to allow rendering
+        }
+        if (typeof updateGlobalBadge === 'function') {
+            setTimeout(updateGlobalBadge, 50);
         }
     }
 
@@ -1353,16 +1372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 showToast(`Guardado con éxito. Tu Código: ${state.shareCode} 💾`);
                 
-                // Actualizar badges
-                const groupCodeText = document.getElementById('groups-code-text');
-                const bracketCodeText = document.getElementById('bracket-code-text');
-                const groupBadge = document.getElementById('groups-share-code');
-                const bracketBadge = document.getElementById('bracket-share-code');
-                
-                if (groupCodeText) groupCodeText.textContent = state.shareCode;
-                if (bracketCodeText) bracketCodeText.textContent = state.shareCode;
-                if (groupBadge) groupBadge.classList.remove('hidden');
-                if (bracketBadge) bracketBadge.classList.remove('hidden');
+                if (typeof updateGlobalBadge === 'function') updateGlobalBadge();
                 
                 initHome();
             }
@@ -1729,14 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnSaveGroups) btnSaveGroups.style.display = 'none';
         if (btnSaveBracket) btnSaveBracket.style.display = 'none';
         
-        const groupCodeText = document.getElementById('groups-code-text');
-        const bracketCodeText = document.getElementById('bracket-code-text');
-        const groupBadge = document.getElementById('groups-share-code');
-        const bracketBadge = document.getElementById('bracket-share-code');
-        if (groupCodeText && state.shareCode) groupCodeText.textContent = state.shareCode;
-        if (bracketCodeText && state.shareCode) bracketCodeText.textContent = state.shareCode;
-        if (groupBadge && state.shareCode) groupBadge.classList.remove('hidden');
-        if (bracketBadge && state.shareCode) bracketBadge.classList.remove('hidden');
+        if (typeof updateGlobalBadge === 'function') updateGlobalBadge();
     };
 
     // --- PWA Installation Logic ---
